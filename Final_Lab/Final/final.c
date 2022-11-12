@@ -74,10 +74,11 @@ char color = WHITE ;
 
 // number of boids
 #define NUM_BOIDS 12000
-#define turnfactor float2fix5(0.2)
-#define CD float2fix5(0.47)
-#define G30 float2fix5(1)
-#define RC float2fix5(1)
+#define turnfactor float2fix5(0.07)
+#define CD float2fix5(0.1)
+#define CDx float2fix5(0.03)
+#define G30 float2fix5(1.1)
+#define RC float2fix5(0.8)
 // #define visualRange int2fix5(40)
 // #define protectedRange int2fix5(8)
 // #define centeringfacotor float2fix5(0.0005)
@@ -154,10 +155,10 @@ void spawnFlock(struct boid* flock_of_boids)
 {
   for (int i = 0; i<NUM_BOIDS; i++) {
     // Start in center of screen
-    flock_of_boids[i].x = int2fix5(10) ;
-    flock_of_boids[i].y = int2fix5(100) ;
-    flock_of_boids[i].vx = int2fix5(rand() % 20 + 1) ;
-    flock_of_boids[i].vy = int2fix5(rand() % 10 + 1) ;
+    flock_of_boids[i].x = int2fix5(1) ;
+    flock_of_boids[i].y = int2fix5(1) ;
+    flock_of_boids[i].vx = float2fix5((float)(rand() % 20000)/20000.0 + 6) ;
+    flock_of_boids[i].vy = float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0) ;
   }
 }
 
@@ -172,22 +173,19 @@ void positionUpdate(struct boid* flock_of_boids, int core_num)
 
       drawRect(fix2int5(flock_of_boids[i].x), fix2int5(flock_of_boids[i].y), 2, 2, BLACK);
 
-      flock_of_boids[i].vx = flock_of_boids[i].vx - multfix5(flock_of_boids[i].vx, CD );
+      flock_of_boids[i].vx = flock_of_boids[i].vx - multfix5(flock_of_boids[i].vx, CDx);
       flock_of_boids[i].vy = flock_of_boids[i].vy + G30 - multfix5(flock_of_boids[i].vy, CD );
 
 
       if (hitRight(flock_of_boids[i].x)) {
-        flock_of_boids[i].vx = flock_of_boids[i].vx - turnfactor ;
+        flock_of_boids[i].x = 1 ;
+        flock_of_boids[i].y = 1 ;
+        flock_of_boids[i].vx = float2fix5((float)(rand() % 20000)/20000.0 + 6) ;
+        flock_of_boids[i].vy = float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0) ;
       }
-      if (hitLeft(flock_of_boids[i].x)) {
-        flock_of_boids[i].vx = flock_of_boids[i].vx + turnfactor ;
-      } 
-
-      if (hitTop(flock_of_boids[i].y)) {
-        flock_of_boids[i].vy = flock_of_boids[i].vy + turnfactor ;
-      }
+      
       if (hitBottom(flock_of_boids[i].y)) {
-        flock_of_boids[i].vy = - multfix5(flock_of_boids[i].vy, RC);
+        flock_of_boids[i].vy = - multfix5(flock_of_boids[i].vy, RC) + float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0);
         flock_of_boids[i].y = int2fix5(479);
       }
       
@@ -198,32 +196,32 @@ void positionUpdate(struct boid* flock_of_boids, int core_num)
 
       drawRect(fix2int5(flock_of_boids[i].x), fix2int5(flock_of_boids[i].y), 2, 2, color);
     }
+
   } else if (core_num == 0) {
     
     for (int i = 1; i<NUM_BOIDS; i += 2) {
       drawRect(fix2int5(flock_of_boids[i].x), fix2int5(flock_of_boids[i].y), 2, 2, BLACK);
 
-      flock_of_boids[i].vx = flock_of_boids[i].vx - multfix5(flock_of_boids[i].vx, CD );
+      flock_of_boids[i].vx = flock_of_boids[i].vx - multfix5(flock_of_boids[i].vx, CDx);
       flock_of_boids[i].vy = flock_of_boids[i].vy + G30 - multfix5(flock_of_boids[i].vy, CD );
 
 
+      
       if (hitRight(flock_of_boids[i].x)) {
-        flock_of_boids[i].vx = flock_of_boids[i].vx - turnfactor ;
+        flock_of_boids[i].x = 1 ;
+        flock_of_boids[i].y = 1 ;
+        flock_of_boids[i].vx = float2fix5((float)(rand() % 20000)/20000.0 + 6) ;
+        flock_of_boids[i].vy = float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0) ;
       }
-      if (hitLeft(flock_of_boids[i].x)) {
-        flock_of_boids[i].vx = flock_of_boids[i].vx + turnfactor ;
-      } 
-
-      if (hitTop(flock_of_boids[i].y)) {
-        flock_of_boids[i].vy = flock_of_boids[i].vy + turnfactor ;
-      }
+      
       if (hitBottom(flock_of_boids[i].y)) {
-        flock_of_boids[i].vy = - multfix5(flock_of_boids[i].vy, RC);
+        flock_of_boids[i].vy = - multfix5(flock_of_boids[i].vy, RC) + float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0);
         flock_of_boids[i].y = int2fix5(479);
       }
       
       flock_of_boids[i].x = flock_of_boids[i].x + flock_of_boids[i].vx ;
       flock_of_boids[i].y = flock_of_boids[i].y + flock_of_boids[i].vy ;
+      
       
       //Draw each boid
 
