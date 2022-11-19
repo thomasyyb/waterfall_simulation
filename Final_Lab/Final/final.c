@@ -112,6 +112,8 @@ bool height_wrap_flag = 0;
 bool old_width_wrap_flag = 0;
 bool old_height_wrap_flag = 0;
 
+bool hit_flag = 0;
+
 // volatile int bottom_wall_0 = 0;
 // volatile int right_wall_0 = 0;
 
@@ -208,6 +210,7 @@ void positionUpdate(struct boid* flock, int i)
       int bottom_wall = 480;
 
       if (hitBottom(flock[i].y, bottom_wall)){
+        hit_flag = 1;
         hitBottomReact(flock+i, bottom_wall);
       }
 
@@ -217,11 +220,14 @@ void positionUpdate(struct boid* flock, int i)
       int bottom_wall = 480;
 
       if (hitBottom(flock[i].y, bottom_wall) && hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
         hitRightReact(flock+i, right_wall);
         hitBottomReact(flock+i, bottom_wall);
       } else if (hitBottom(flock[i].y, bottom_wall)){
+        hit_flag = 1;
         hitBottomReact(flock+i, bottom_wall);
       } else if (hitRight(flock[i].x + flock[i].vx, right_wall)){
+        hit_flag = 1;
         hitRightReact(flock+i, right_wall);
       }
 
@@ -231,11 +237,14 @@ void positionUpdate(struct boid* flock, int i)
       int bottom_wall = 360;
 
       if (hitBottom(flock[i].y, bottom_wall) && hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
         hitBottomReact(flock+i, bottom_wall);
         hitRightReact(flock+i, right_wall);
       } else if (hitBottom(flock[i].y, bottom_wall)){
+        hit_flag = 1;
         hitBottomReact(flock+i, bottom_wall);
       } else if (hitRight(flock[i].x + flock[i].vx, right_wall)){
+        hit_flag = 1;
         hitRightReact(flock+i, right_wall);
       }
 
@@ -244,29 +253,36 @@ void positionUpdate(struct boid* flock, int i)
       int right_wall = 519;
       int bottom_wall = 240;
       if (hitBottom(flock[i].y , bottom_wall) && hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
         hitBottomReact(flock+i, bottom_wall);
         hitRightReact(flock+i, right_wall);
       } else if (hitBottom(flock[i].y, bottom_wall)){
+        hit_flag = 1;
         hitBottomReact(flock+i, bottom_wall);
       } else if (hitRight(flock[i].x + flock[i].vx, right_wall)){
+        hit_flag = 1;
         hitRightReact(flock+i, right_wall);
       }
     } else{
       int right_wall = 639;
       int bottom_wall = 120;
       if (hitBottom(flock[i].y, bottom_wall)) {
+        hit_flag = 1;
         hitBottomReact(flock+i, bottom_wall);
       }
       if (hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
         hitRightReact(flock+i, right_wall);
       }
     }
   } else {
     if (hitBottom(flock[i].y, 480)) {
+      hit_flag = 1;
       flock[i].vy = - multfix5(flock[i].vy, RC) + float2fix5((float)(jump_rand*(rand() % 4000)/2000.0));
       flock[i].y = int2fix5(480 - 1);
     }
     if (hitLeft(flock[i].x + flock[i].vx)) {
+      hit_flag = 1;
       flock[i].x = int2fix5(rand() & x_INCREMENT) ;
       flock[i].y = int2fix5(rand() & y_INCREMENT) ;
       flock[i].vx = float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
@@ -278,8 +294,13 @@ void positionUpdate(struct boid* flock, int i)
   flock[i].y = flock[i].y + flock[i].vy ;
 
   //Draw each boid
-
-  drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, color);
+  if (hit_flag){
+    drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, WHITE);
+  } else{
+    drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, BLUE);
+  }
+  hit_flag = 0;
+  
 }
 
 void parallel(struct boid* flock, int core_num) {
