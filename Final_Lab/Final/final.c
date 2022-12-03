@@ -70,7 +70,7 @@ typedef signed short fix5 ;
 #define FRAME_RATE 33000
 
 // the color of the boid
-char color = WHITE ;
+char color = BLUE ;
 
 // number of boids
 #define NUM_BOIDS 12000
@@ -79,6 +79,12 @@ char color = WHITE ;
 #define CDx float2fix5(0.03)
 #define G30 float2fix5(1.1)
 #define RC float2fix5(0.8)
+#define RCx float2fix5(1.1)
+#define x_INCREMENT 0x7
+#define y_INCREMENT 0x5
+#define vx_init 3
+#define jump_rand 3
+
 // #define visualRange int2fix5(40)
 // #define protectedRange int2fix5(8)
 // #define centeringfacotor float2fix5(0.0005)
@@ -91,10 +97,11 @@ char color = WHITE ;
 // #define biasval_1 float2fix5(0.001)
 // #define biasval_2 float2fix5(0.002)
 
-int old_arena_left = 0;
-int old_arena_right = 640;
-int old_arena_bottom = 480;
-int old_arena_top = 0;
+// int old_arena_left = 0;
+// int old_arena_right = 640;
+// int old_arena_bottom = 480;
+// int old_arena_top = 0;
+
 int arena_left = 0;
 int arena_right = 640;
 int arena_bottom = 480;
@@ -105,6 +112,14 @@ bool height_wrap_flag = 0;
 bool old_width_wrap_flag = 0;
 bool old_height_wrap_flag = 0;
 
+bool hit_flag = 0;
+
+// volatile int bottom_wall_0 = 0;
+// volatile int right_wall_0 = 0;
+
+// volatile int bottom_wall = 0;
+// volatile int right_wall = 0;
+
 
 
 // Wall detection
@@ -113,8 +128,8 @@ bool old_height_wrap_flag = 0;
 // #define hitLeft(a) (a<int2fix5(100))
 // #define hitRight(a) (a>int2fix5(540))
 
-inline bool hitBottom(fix5 b){
-  return (b>=int2fix5(arena_bottom));
+inline bool hitBottom(fix5 a, int b){
+  return (a>=int2fix5(b));
 }
 
 inline bool hitTop(fix5 b){
@@ -125,8 +140,8 @@ inline bool hitLeft(fix5 a){
   return (a<int2fix5(arena_left));
 }
 
-inline bool hitRight(fix5 a){
-  return (a>int2fix5(arena_right));
+inline bool hitRight(fix5 a, int b){
+  return (a>=int2fix5(b));
 }
 
 struct boid {
@@ -136,7 +151,7 @@ struct boid {
   fix5 vy ;
 };
 
-struct boid flock_of_boids[NUM_BOIDS];
+struct boid flock[NUM_BOIDS];
 
 // Boid on core 0
 fix5 boid0_x ;
@@ -151,81 +166,188 @@ fix5 boid1_vx ;
 fix5 boid1_vy ;
 
 // Create a flock
-void spawnFlock(struct boid* flock_of_boids)
+void spawnFlock(struct boid* flock)
 {
   for (int i = 0; i<NUM_BOIDS; i++) {
     // Start in center of screen
-    flock_of_boids[i].x = int2fix5(1) ;
-    flock_of_boids[i].y = int2fix5(1) ;
-    flock_of_boids[i].vx = float2fix5((float)(rand() % 20000)/20000.0 + 6) ;
-    flock_of_boids[i].vy = float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0) ;
+    flock[i].x = int2fix5(640) - int2fix5(rand() & x_INCREMENT) ;
+    flock[i].y = int2fix5(rand() & y_INCREMENT) ;
+    flock[i].vx = -float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
+    flock[i].vy = -float2fix5((float)(rand() % 4000)/2000.0 - (rand() %4000)/2000.0) ;
   }
 }
 
+void hitRightReact(struct boid* flock, int right_wall) {
+  flock->vx = - multfix5(flock->vx, RCx) - float2fix5((float)(jump_rand*(rand() % 4000)/2000.0));
+  // flock->vx = - flock->vx;
+  flock->x = int2fix5(right_wall - 5);
+}
 
-
+void hitBottomReact(struct boid* flock, int bottom_wall) {
+  flock->vy = - multfix5(flock->vy, RC) + float2fix5((float)(jump_rand*(rand() % 4000)/2000.0));
+  flock->y = int2fix5(bottom_wall - 5);
+}
 
 // Position Update method 
-void positionUpdate(struct boid* flock_of_boids, int core_num)
+void positionUpdate(struct boid* flock, int i)
 {
-  if (core_num == 1) {
-    for (int i = 0; i<NUM_BOIDS; i += 2) {
+  if ((flock[i].x >= int2fix5(519) && flock[i].x <= int2fix5(530)) && (flock[i].y >= int2fix5(119) && flock[i].y <= int2fix5(130))){
+  }
 
-      drawRect(fix2int5(flock_of_boids[i].x), fix2int5(flock_of_boids[i].y), 2, 2, BLACK);
+  else if ((flock[i].x >= int2fix5(399) && flock[i].x <= int2fix5(410)) && (flock[i].y >= int2fix5(239) && flock[i].y <= int2fix5(250))){
+  }
 
-      flock_of_boids[i].vx = flock_of_boids[i].vx - multfix5(flock_of_boids[i].vx, CDx);
-      flock_of_boids[i].vy = flock_of_boids[i].vy + G30 - multfix5(flock_of_boids[i].vy, CD );
+  else if ((flock[i].x >= int2fix5(279) && flock[i].x <= int2fix5(290)) && (flock[i].y >= int2fix5(359) && flock[i].y <= int2fix5(370))){
+  }
 
+  else{
+    
+    drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, BLACK);
 
-      if (hitRight(flock_of_boids[i].x)) {
-        flock_of_boids[i].x = 1 ;
-        flock_of_boids[i].y = 1 ;
-        flock_of_boids[i].vx = float2fix5((float)(rand() % 20000)/20000.0 + 6) ;
-        flock_of_boids[i].vy = float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0) ;
+  }
+  flock[i].vx = flock[i].vx - multfix5(flock[i].vx, CDx);
+  flock[i].vy = flock[i].vy + G30 - multfix5(flock[i].vy, CD );
+
+  if (hitLeft(flock[i].x + flock[i].vx)) {
+    // flock[i].x = int2fix5(rand() & x_INCREMENT) ;
+    // flock[i].y = int2fix5(rand() & y_INCREMENT) ;
+    // flock[i].vx = float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
+    // flock[i].vy = float2fix5((float)(rand() % 4000)/2000.0 - (rand() % 4000)/2000.0) ;
+    flock[i].x = int2fix5(640) - int2fix5(rand() & x_INCREMENT) ;
+    flock[i].y = int2fix5(rand() & y_INCREMENT) ;
+    flock[i].vx = -float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
+    flock[i].vy = -float2fix5((float)(rand() % 4000)/2000.0 - (rand() %4000)/2000.0) ;
+  }
+
+  if (flock[i].x + flock[i].y >= int2fix5(640)){
+    if (flock[i].x + flock[i].vx <= int2fix5(159)){
+
+      int bottom_wall = 479;
+
+      if (hitBottom(flock[i].y + flock[i].vy, bottom_wall)){
+        hit_flag = 1;
+        hitBottomReact(flock+i, bottom_wall);
       }
-      
-      if (hitBottom(flock_of_boids[i].y)) {
-        flock_of_boids[i].vy = - multfix5(flock_of_boids[i].vy, RC) + float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0);
-        flock_of_boids[i].y = int2fix5(479);
-      }
-      
-      flock_of_boids[i].x = flock_of_boids[i].x + flock_of_boids[i].vx ;
-      flock_of_boids[i].y = flock_of_boids[i].y + flock_of_boids[i].vy ;
-      
-      //Draw each boid
 
-      drawRect(fix2int5(flock_of_boids[i].x), fix2int5(flock_of_boids[i].y), 2, 2, color);
+    } else if (int2fix5(159) < flock[i].x + flock[i].vx && flock[i].x + flock[i].vx <= int2fix5(280)){
+
+      int right_wall = 279;
+      int bottom_wall = 479;
+
+      if (hitBottom(flock[i].y+ flock[i].vy, bottom_wall) && hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
+        hitRightReact(flock+i, right_wall);
+        hitBottomReact(flock+i, bottom_wall);
+      } else if (hitBottom(flock[i].y + flock[i].vy, bottom_wall)){
+        hit_flag = 1;
+        hitBottomReact(flock+i, bottom_wall);
+      } else if (hitRight(flock[i].x + flock[i].vx, right_wall)){
+        hit_flag = 1;
+        hitRightReact(flock+i, right_wall);
+      }
+
+    } else if(int2fix5(279) < flock[i].x + flock[i].vx && flock[i].x + flock[i].vx <= int2fix5(400)){
+
+      int right_wall = 399;
+      int bottom_wall = 359;
+
+      if (hitBottom(flock[i].y + flock[i].vy, bottom_wall) && hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
+        hitBottomReact(flock+i, bottom_wall);
+        hitRightReact(flock+i, right_wall);
+      } else if (hitBottom(flock[i].y + flock[i].vy, bottom_wall)){
+        hit_flag = 1;
+        hitBottomReact(flock+i, bottom_wall);
+      } else if (hitRight(flock[i].x + flock[i].vx, right_wall)){
+        hit_flag = 1;
+        hitRightReact(flock+i, right_wall);
+      }
+
+
+    } else if(int2fix5(399) < flock[i].x + flock[i].vx && flock[i].x + flock[i].vx <= int2fix5(520)){
+      int right_wall = 519;
+      int bottom_wall = 239;
+      if (hitBottom(flock[i].y + flock[i].vy , bottom_wall) && hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
+        hitBottomReact(flock+i, bottom_wall);
+        hitRightReact(flock+i, right_wall);
+      } else if (hitBottom(flock[i].y + flock[i].vy, bottom_wall)){
+        hit_flag = 1;
+        hitBottomReact(flock+i, bottom_wall);
+      } else if (hitRight(flock[i].x + flock[i].vx, right_wall)){
+        hit_flag = 1;
+        hitRightReact(flock+i, right_wall);
+      }
+    } else{
+      int right_wall = 639;
+      int bottom_wall = 119;
+      if (hitBottom(flock[i].y + flock[i].vy, bottom_wall)) {
+        hit_flag = 1;
+        hitBottomReact(flock+i, bottom_wall);
+      }
+      if (hitRight(flock[i].x + flock[i].vx, right_wall)) {
+        hit_flag = 1;
+        hitRightReact(flock+i, right_wall);
+      }
+    }
+  } 
+  
+  else {
+
+    if (hitBottom(flock[i].y + flock[i].vy, 479)) {
+      hit_flag = 1;
+      flock[i].vy = - multfix5(flock[i].vy, RC) + float2fix5((float)(jump_rand*(rand() % 4000)/2000.0));
+      flock[i].y = int2fix5(479 - 1);
     }
 
-  } else if (core_num == 0) {
-    
+    if (hitLeft(flock[i].x + flock[i].vx)) {
+      
+    // flock[i].x = int2fix5(rand() & x_INCREMENT) ;
+    // flock[i].y = int2fix5(rand() & y_INCREMENT) ;
+    // flock[i].vx = float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
+    // flock[i].vy = float2fix5((float)(rand() % 4000)/2000.0 - (rand() % 4000)/2000.0) ;
+    flock[i].x = int2fix5(640) - int2fix5(rand() & x_INCREMENT) ;
+    flock[i].y = int2fix5(rand() & y_INCREMENT) ;
+    flock[i].vx = -float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
+    flock[i].vy = -float2fix5((float)(rand() % 4000)/2000.0 - (rand() %4000)/2000.0) ;
+
+    }
+  }
+  
+  flock[i].x = flock[i].x + flock[i].vx ;
+  flock[i].y = flock[i].y + flock[i].vy ;
+
+  //Draw each boid
+  if ((flock[i].x >= int2fix5(519) && flock[i].x <= int2fix5(530)) && (flock[i].y >= int2fix5(119) && flock[i].y <= int2fix5(130))){
+  }
+
+  else if ((flock[i].x >= int2fix5(399) && flock[i].x <= int2fix5(410)) && (flock[i].y >= int2fix5(239) && flock[i].y <= int2fix5(250))){
+  }
+
+  else if ((flock[i].x >= int2fix5(279) && flock[i].x <= int2fix5(290)) && (flock[i].y >= int2fix5(359) && flock[i].y <= int2fix5(370))){
+  }
+
+  else{
+
+     if (hit_flag){
+      drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, WHITE);
+    } else{
+      drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, BLUE);
+    }
+    hit_flag = 0;
+  }
+
+
+}
+
+void parallel(struct boid* flock, int core_num) {
+  if (core_num == 1) {
+    for (int i = 0; i<NUM_BOIDS; i += 2) {
+      positionUpdate(flock, i);
+    }
+  } else {
     for (int i = 1; i<NUM_BOIDS; i += 2) {
-      drawRect(fix2int5(flock_of_boids[i].x), fix2int5(flock_of_boids[i].y), 2, 2, BLACK);
-
-      flock_of_boids[i].vx = flock_of_boids[i].vx - multfix5(flock_of_boids[i].vx, CDx);
-      flock_of_boids[i].vy = flock_of_boids[i].vy + G30 - multfix5(flock_of_boids[i].vy, CD );
-
-
-      
-      if (hitRight(flock_of_boids[i].x)) {
-        flock_of_boids[i].x = 1 ;
-        flock_of_boids[i].y = 1 ;
-        flock_of_boids[i].vx = float2fix5((float)(rand() % 20000)/20000.0 + 6) ;
-        flock_of_boids[i].vy = float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0) ;
-      }
-      
-      if (hitBottom(flock_of_boids[i].y)) {
-        flock_of_boids[i].vy = - multfix5(flock_of_boids[i].vy, RC) + float2fix5((float)(rand() % 40000)/20000.0 - (rand() % 40000)/20000.0);
-        flock_of_boids[i].y = int2fix5(479);
-      }
-      
-      flock_of_boids[i].x = flock_of_boids[i].x + flock_of_boids[i].vx ;
-      flock_of_boids[i].y = flock_of_boids[i].y + flock_of_boids[i].vy ;
-      
-      
-      //Draw each boid
-
-      drawRect(fix2int5(flock_of_boids[i].x), fix2int5(flock_of_boids[i].y), 2, 2, color);
+      positionUpdate(flock, i);
     }
   }
 }
@@ -295,14 +417,14 @@ static PT_THREAD (protothread_anim(struct pt *pt))
     //   spawnBoid(&boid0_x, &boid0_y, &boid0_vx, &boid0_vy, 0);
     // }
 
-    spawnFlock(flock_of_boids);
+    spawnFlock(flock);
  
     while(1) {
       // Measure time at start of thread
       begin_time = time_us_32() ;    
 
       // update boid's position and velocity
-      positionUpdate(flock_of_boids,0) ;
+      parallel(flock,0) ;
       
       // delay in accordance with frame rate
       spare_time_for_display = FRAME_RATE - (time_us_32() - begin_time) ;
@@ -329,6 +451,9 @@ static PT_THREAD (protothread_vga_information(struct pt *pt))
     setTextSize(1) ;
     // Will be used to write dynamic text to screen
     static char vgatext[40];
+    // fillRect(280,360,360,120,WHITE);
+    // fillRect(400,240,240,120,WHITE);
+    // fillRect(520,120,120,120,WHITE);
  
     while(1) {
       // Measure time at start of thread
@@ -336,9 +461,9 @@ static PT_THREAD (protothread_vga_information(struct pt *pt))
 
       // Static text on VGA
       setCursor(65, 0) ;
-      writeString("Boids Lab") ;
+      writeString("Particle System") ;
       setCursor(65, 10) ;
-      writeString("Number of boids:") ;
+      writeString("Number of Particle:") ;
       setCursor(165, 10) ;
       sprintf(vgatext, "%d", NUM_BOIDS) ;
       writeString(vgatext) ;
@@ -346,6 +471,22 @@ static PT_THREAD (protothread_vga_information(struct pt *pt))
       writeString("Current spare time(us):") ;
       setCursor(250, 0) ;
       writeString("Elapsed time:") ;
+
+      // drawHLine(520,120,120,WHITE) ;
+      // arena_right 
+
+      fillRect(280,360,360,120,WHITE);
+      fillRect(400,240,240,120,WHITE);
+      fillRect(520,120,120,120,WHITE);
+
+
+
+
+      // drawVLine(520,120,120,WHITE) ;
+      // drawHLine(400,240,120,WHITE) ;
+      // drawVLine(400,240,120,WHITE) ;
+      // drawHLine(280,360,120,WHITE) ;
+      // drawVLine(280,360,120,WHITE) ;
 
       // Dynamic text on VGA
       fillRect(330, 0, 176, 30, BLACK);
@@ -392,7 +533,7 @@ static PT_THREAD (protothread_anim1(struct pt *pt))
     while(1) {
       // Measure time at start of thread
       begin_time = time_us_32() ;
-      positionUpdate(flock_of_boids,1) ;      
+      parallel(flock,1) ;      
       spare_time = FRAME_RATE - (time_us_32() - begin_time) ;
       // yield for necessary amount of time
       PT_YIELD_usec(spare_time) ;
