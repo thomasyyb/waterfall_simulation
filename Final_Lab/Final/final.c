@@ -73,7 +73,7 @@ typedef signed short fix5 ;
 char color = BLUE ;
 
 // number of boids
-#define NUM_BOIDS 12000
+#define NUM_BOIDS 10000
 #define turnfactor float2fix5(0.07)
 #define CD float2fix5(0.1)
 #define CDx float2fix5(0.03)
@@ -114,13 +114,14 @@ bool old_height_wrap_flag = 0;
 
 bool hit_flag = 0;
 
-// volatile int bottom_wall_0 = 0;
-// volatile int right_wall_0 = 0;
+struct block {
+  fix5 x;
+  fix5 y;
+  fix5 length;
+  fix5 width;
+};
 
-// volatile int bottom_wall = 0;
-// volatile int right_wall = 0;
-
-
+struct block m_block;
 
 // Wall detection
 // #define hitBottom(b) (b>int2fix5(380))
@@ -193,32 +194,33 @@ void positionUpdate(struct boid* flock, int i)
 {
   if ((flock[i].x >= int2fix5(519) && flock[i].x <= int2fix5(530)) && (flock[i].y >= int2fix5(119) && flock[i].y <= int2fix5(130))){
   }
-
   else if ((flock[i].x >= int2fix5(399) && flock[i].x <= int2fix5(410)) && (flock[i].y >= int2fix5(239) && flock[i].y <= int2fix5(250))){
   }
-
   else if ((flock[i].x >= int2fix5(279) && flock[i].x <= int2fix5(290)) && (flock[i].y >= int2fix5(359) && flock[i].y <= int2fix5(370))){
   }
-
+  else if ((flock[i].x >= (m_block.x-m_block.length-int2fix5(1)) && flock[i].x <= (m_block.x+m_block.length+int2fix5(1))) && (flock[i].y >= (m_block.y-m_block.width-int2fix5(1)) && flock[i].y <= (m_block.y+m_block.width+int2fix5(1)))){
+  }
   else{
-    
     drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, BLACK);
-
   }
   flock[i].vx = flock[i].vx - multfix5(flock[i].vx, CDx);
   flock[i].vy = flock[i].vy + G30 - multfix5(flock[i].vy, CD );
 
+  // teleport!
   if (hitLeft(flock[i].x + flock[i].vx)) {
-    // flock[i].x = int2fix5(rand() & x_INCREMENT) ;
-    // flock[i].y = int2fix5(rand() & y_INCREMENT) ;
-    // flock[i].vx = float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
-    // flock[i].vy = float2fix5((float)(rand() % 4000)/2000.0 - (rand() % 4000)/2000.0) ;
     flock[i].x = int2fix5(640) - int2fix5(rand() & x_INCREMENT) ;
     flock[i].y = int2fix5(rand() & y_INCREMENT) ;
     flock[i].vx = -float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
     flock[i].vy = -float2fix5((float)(rand() % 4000)/2000.0 - (rand() %4000)/2000.0) ;
   }
 
+  if (flock[i].x >= m_block.x-m_block.length && flock[i].x <= m_block.x+m_block.length){
+    if (hitBottom(flock[i].y + flock[i].vy, fix2int5(m_block.y-m_block.width)) && !hitBottom(flock[i].y, fix2int5(m_block.y-m_block.width))) {
+      hit_flag = 1;
+      hitBottomReact(flock+i, fix2int5(m_block.y-m_block.width));
+    }
+  }
+  
   if (flock[i].x + flock[i].y >= int2fix5(640)){
     if (flock[i].x + flock[i].vx <= int2fix5(159)){
 
@@ -291,26 +293,19 @@ void positionUpdate(struct boid* flock, int i)
       }
     }
   } 
-  
-  else {
 
+  else {
     if (hitBottom(flock[i].y + flock[i].vy, 479)) {
       hit_flag = 1;
       flock[i].vy = - multfix5(flock[i].vy, RC) + float2fix5((float)(jump_rand*(rand() % 4000)/2000.0));
       flock[i].y = int2fix5(479 - 1);
     }
-
     if (hitLeft(flock[i].x + flock[i].vx)) {
-      
-    // flock[i].x = int2fix5(rand() & x_INCREMENT) ;
-    // flock[i].y = int2fix5(rand() & y_INCREMENT) ;
-    // flock[i].vx = float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
-    // flock[i].vy = float2fix5((float)(rand() % 4000)/2000.0 - (rand() % 4000)/2000.0) ;
-    flock[i].x = int2fix5(640) - int2fix5(rand() & x_INCREMENT) ;
-    flock[i].y = int2fix5(rand() & y_INCREMENT) ;
-    flock[i].vx = -float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
-    flock[i].vy = -float2fix5((float)(rand() % 4000)/2000.0 - (rand() %4000)/2000.0) ;
 
+      flock[i].x = int2fix5(640) - int2fix5(rand() & x_INCREMENT) ;
+      flock[i].y = int2fix5(rand() & y_INCREMENT) ;
+      flock[i].vx = -float2fix5((float)(rand() % 2000)/2000.0 + vx_init) ;
+      flock[i].vy = -float2fix5((float)(rand() % 4000)/2000.0 - (rand() %4000)/2000.0) ;
     }
   }
   
@@ -320,16 +315,14 @@ void positionUpdate(struct boid* flock, int i)
   //Draw each boid
   if ((flock[i].x >= int2fix5(519) && flock[i].x <= int2fix5(530)) && (flock[i].y >= int2fix5(119) && flock[i].y <= int2fix5(130))){
   }
-
   else if ((flock[i].x >= int2fix5(399) && flock[i].x <= int2fix5(410)) && (flock[i].y >= int2fix5(239) && flock[i].y <= int2fix5(250))){
   }
-
   else if ((flock[i].x >= int2fix5(279) && flock[i].x <= int2fix5(290)) && (flock[i].y >= int2fix5(359) && flock[i].y <= int2fix5(370))){
   }
-
+  else if ((flock[i].x >= (m_block.x-m_block.length-int2fix5(1)) && flock[i].x <= (m_block.x+m_block.length+int2fix5(1))) && (flock[i].y >= (m_block.y-m_block.width-int2fix5(1)) && flock[i].y <= (m_block.y+m_block.width+int2fix5(1)))){
+  }
   else{
-
-     if (hit_flag){
+    if (hit_flag){
       drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, WHITE);
     } else{
       drawRect(fix2int5(flock[i].x), fix2int5(flock[i].y), 2, 2, BLUE);
@@ -390,10 +383,6 @@ static PT_THREAD (protothread_serial(struct pt *pt))
         // convert input string to number
         sscanf(pt_serial_in_buffer,"%d", &user_input_1) ;
         width_input = user_input_1;
-
-
-        
-
         PT_YIELD_usec(1) ;
 
       } // END WHILE(1)
@@ -435,6 +424,97 @@ static PT_THREAD (protothread_anim(struct pt *pt))
   PT_END(pt);
 } // animation thread
 
+// information display
+static PT_THREAD (protothread_mouse_block(struct pt *pt))
+{
+    // Mark beginning of thread
+    PT_BEGIN(pt);
+
+    m_block.x = int2fix5(600);
+    m_block.y = int2fix5(40);
+    m_block.length = int2fix5(15);
+    m_block.width = int2fix5(4);
+    fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+
+    static uint8_t ch ;
+    static int user_input ;
+    printf("gywuqgxiwhqx");
+
+    static int begin_time ;
+    static int spare_time ;
+    while(1) {
+      while(uart_is_readable(UART_ID)){uart_getc(UART_ID);}
+      PT_YIELD_UNTIL(pt, (int)uart_is_readable(UART_ID)) ;
+      ch = uart_getc(UART_ID);
+      // PT_YIELD_UNTIL(pt, (int)uart_is_writable(UART_ID)) ;
+      // uart_putc(UART_ID, ch);
+
+      // Measure time at start of thread
+      begin_time = time_us_32() ;
+
+      // mouse block update
+      if (ch == 'a') {
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),BLACK);
+        // change position
+        m_block.x -= int2fix5(8);
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+      } else if (ch == 'w') {
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),BLACK);
+        // change position
+        m_block.y -= int2fix5(8);
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+      } else if (ch == 's') {
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),BLACK);
+        // change position
+        m_block.y += int2fix5(8);
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+      } else if (ch == 'd') {
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),BLACK);
+        // change position
+        m_block.x += int2fix5(8);
+        fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+        
+      } else { // it stays but we can try to change the parameters of the block
+        if (ch == 'x') {
+          // print prompt
+          sprintf(pt_serial_out_buffer, "input the length: ");
+          // non-blocking write
+          serial_write ;
+          // spawn a thread to do the non-blocking serial read
+          serial_read ;
+          // convert input string to number
+          sscanf(pt_serial_in_buffer,"%d", &user_input) ;
+          fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),BLACK);
+          m_block.length = int2fix5(user_input);
+          fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+        }
+        else if (ch == 'y') {  // no side boundary condition right now
+          // print prompt
+          sprintf(pt_serial_out_buffer, "input the height: ");
+          // non-blocking write
+          serial_write ;
+          // spawn a thread to do the non-blocking serial read
+          serial_read ;
+          // convert input string to number
+          sscanf(pt_serial_in_buffer,"%d", &user_input) ;
+          fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),BLACK);
+          m_block.width = int2fix5(user_input);
+          fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+        }
+        else {
+          fillRect(fix2int5(m_block.x-m_block.length),fix2int5(m_block.y-m_block.width),fix2int5(m_block.length<<1),fix2int5(m_block.width<<1),MAGENTA);
+        }
+      }
+
+      // delay in accordance with display rate
+      spare_time = FRAME_RATE - (time_us_32() - begin_time) ;
+      // yield for necessary amount of time
+      PT_YIELD_usec(spare_time) ;
+      // NEVER exit while
+    } // END WHILE(1)
+
+    PT_END(pt);
+}
 
 // information display
 static PT_THREAD (protothread_vga_information(struct pt *pt))
@@ -460,16 +540,16 @@ static PT_THREAD (protothread_vga_information(struct pt *pt))
       begin_time = time_us_32() ;
 
       // Static text on VGA
-      setCursor(65, 0) ;
+      setCursor(65, 5) ;
       writeString("Particle System") ;
-      setCursor(65, 10) ;
-      writeString("Number of Particle:") ;
-      setCursor(165, 10) ;
+      setCursor(65, 15) ;
+      writeString("Number of Particles:") ;
+      setCursor(190, 15) ;
       sprintf(vgatext, "%d", NUM_BOIDS) ;
       writeString(vgatext) ;
-      setCursor(65, 20) ;
+      setCursor(65, 25) ;
       writeString("Current spare time(us):") ;
-      setCursor(250, 0) ;
+      setCursor(250, 5) ;
       writeString("Elapsed time:") ;
 
       // drawHLine(520,120,120,WHITE) ;
@@ -479,9 +559,6 @@ static PT_THREAD (protothread_vga_information(struct pt *pt))
       fillRect(400,240,240,120,WHITE);
       fillRect(520,120,120,120,WHITE);
 
-
-
-
       // drawVLine(520,120,120,WHITE) ;
       // drawHLine(400,240,120,WHITE) ;
       // drawVLine(400,240,120,WHITE) ;
@@ -489,14 +566,14 @@ static PT_THREAD (protothread_vga_information(struct pt *pt))
       // drawVLine(280,360,120,WHITE) ;
 
       // Dynamic text on VGA
-      fillRect(330, 0, 176, 30, BLACK);
+      fillRect(330, 5, 176, 30, BLACK);
       sprintf(vgatext, "%d", elapsed_time) ;
-      setCursor(330, 0) ;
+      setCursor(330, 5) ;
       writeString(vgatext) ;
 
       // Dynamic text on VGA
-      fillRect(205, 20, 176, 30, BLACK);
-      setCursor(205, 20) ;
+      fillRect(205, 25, 176, 30, BLACK);
+      setCursor(205, 25) ;
       if (spare_time_for_display > 0) {
         sprintf(vgatext, "%d", spare_time_for_display) ;
         writeString(vgatext) ;
@@ -550,6 +627,8 @@ void core1_main(){
   pt_add_thread(protothread_anim1);
   // Add information display on VGA
   pt_add_thread(protothread_vga_information);
+  // Mouse control
+  pt_add_thread(protothread_mouse_block);
   // Start the scheduler
   pt_schedule_start ;
 
@@ -574,7 +653,7 @@ int main(){
   multicore_launch_core1(&core1_main);
 
   // add threads
-  pt_add_thread(protothread_serial);
+  // pt_add_thread(protothread_serial);
   pt_add_thread(protothread_anim);
 
   // start scheduler
